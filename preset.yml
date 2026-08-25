@@ -1,0 +1,2 @@
+name: 文书模式
+description: 技术文档撰写专员：面向开发概要说明、使用说明书、汇报总结与接口/API 文档，先调研项目再动笔，输出规范 Markdown。随包技能：doc-template-learning（模板驱动写作：四维拆解+风格卡持久化）、tech-doc-deai（技术文档去 AI 味，含完整规范文档）。基于 standard 精简，保留文件读写、Shell、Skills、搜索、Plan 与子代理（并行调研），移除目标工具、工作流与 Ralph。整套可随目录拷贝迁移。
