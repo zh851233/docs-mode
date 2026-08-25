@@ -1,0 +1,10 @@
+# 分发包（体积大、可随时重建）不入库
+docs-mode-plugin.zip
+*.zip
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
