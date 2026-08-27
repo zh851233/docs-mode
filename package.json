@@ -1,0 +1,33 @@
+{
+  "name": "dsh-docs-mode",
+  "description": "文书模式（docs-mode）Agent preset 安装器：把技术文档撰写模式（含模板知识库、去 AI 味、质量保障工具集）部署到 DSH 用户 preset 根",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml",
+    "preset/agent.cordis.yml",
+    "preset/preset.yml",
+    "preset/skills",
+    "preset/assets"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "preset",
+    "docs",
+    "documentation",
+    "agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zh851233/docs-mode.git"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# 可选 Bundle：注册 docs-mode 安装器（把文书模式 preset 部署到用户 preset 根）。
+# 安装后需重启 DSH，模式选择器即出现「文书模式」。
+- insert:
+    - id: docs-mode-installer
+      name: dsh-docs-mode
