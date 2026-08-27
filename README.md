@@ -1,10 +1,10 @@
 # docs-mode · 文书模式
 
-DeepSeek Harness（DSH）技术文档撰写 Agent preset（模式）插件包。
+DeepSeek Harness（DSH）技术文档撰写 Agent preset（模式）安装包，可通过 `dsh plugin add` 一键安装。
 
 ## 这是什么
 
-一个自包含的 DSH agent preset，将 Agent 变成「技术文档撰写专员」，面向四类文书：
+一个自包含的 DSH agent preset，将 Agent 变成「技术文档撰写专员」，覆盖 11+ 类技术文书：
 
 - 开发概要说明
 - 使用说明书
@@ -23,18 +23,23 @@ DeepSeek Harness（DSH）技术文档撰写 Agent preset（模式）插件包。
 
 ```
 docs-mode/
-├── agent.cordis.yml              # 模式组合（persona + 工具集 + skill 注册）
-├── preset.yml                    # 模式元数据（显示名、描述）
-├── skills/
-│   ├── doc-template-learning/SKILL.md
-│   ├── tech-doc-deai/SKILL.md + tech-doc-deai.md
-│   └── doc-quality/SKILL.md      # 质量保障工作流
-├── assets/docx-tools/            # Markdown⇄Word 转换与校验
-├── assets/doc-tools/             # 质量保障脚本：体检/一致性/重排/同步/PDF/软著源码
-├── assets/screenshot-tools/      # Playwright 界面截图自动化
-├── assets/templates/             # 内置模板库 11 类 + 英文通用骨架（每类 骨架.md + 风格卡.md）
-├── tech-doc-deai.md              # 规范文档副本（便于单独查阅）
-└── docs-mode-plugin.zip          # 本包的分发压缩包
+├── package.json                   # dsh.bundle 声明（插件市场可安装）
+├── cordis.patch.yml               # 注册 docs-mode-installer 插件行
+├── lib/index.js                   # 安装器：把 preset 部署到 ~/.dsh/.agent-presets/docs/
+├── preset/                        # 文书模式本体（拷贝到 .agent-presets/docs/ 即用）
+│   ├── agent.cordis.yml           # 模式组合（persona + 工具集 + skill 注册）
+│   ├── preset.yml                 # 模式元数据（显示名、描述）
+│   ├── skills/
+│   │   ├── doc-template-learning/SKILL.md
+│   │   ├── tech-doc-deai/SKILL.md + tech-doc-deai.md
+│   │   └── doc-quality/SKILL.md   # 质量保障工作流
+│   └── assets/
+│       ├── docx-tools/            # Markdown⇄Word 转换与校验
+│       ├── doc-tools/             # 质量保障脚本：体检/一致性/重排/同步/PDF/软著源码
+│       ├── screenshot-tools/      # Playwright 界面截图自动化
+│       └── templates/             # 内置模板库 11 类 + 英文通用骨架
+├── tech-doc-deai.md               # 规范文档副本（便于单独查阅）
+└── docs-mode-plugin.zip           # 手动安装用的分发包
 ```
 
 ## 模板知识库（自主学习）
@@ -45,7 +50,17 @@ docs-mode/
 
 ## 安装
 
-1. 将本目录内容解压/拷贝到 DSH 用户 preset 根：
+**方式一：插件市场/直接安装（推荐）**
+
+```sh
+dsh plugin add https://github.com/zh851233/docs-mode
+```
+
+安装器会把 preset 内容（`preset/` 目录）部署到 `~/.dsh/.agent-presets/docs/`，然后重启 DSH，模式选择器即出现「文书模式」。已存在时不覆盖（如需强制覆盖：`DSH_DOCS_MODE_FORCE=1 dsh plugin add ...`）。
+
+**方式二：手动拷贝**
+
+1. 将本仓库 `preset/` 目录内容拷贝到 DSH 用户 preset 根：
    - Windows：`%USERPROFILE%\.dsh\.agent-presets\docs\`
    - Linux/macOS：`~/.dsh/.agent-presets/docs/`
 2. 重启 DSH。
