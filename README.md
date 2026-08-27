@@ -29,6 +29,10 @@ docs-mode/
 │   └── tech-doc-deai/
 │       ├── SKILL.md              # 去 AI 味执行协议
 │       └── tech-doc-deai.md      # 完整规范（高危句式库 + 技术风格红线）
+├── assets/docx-tools/            # 随包工具：Markdown⇄Word 转换与校验
+│   ├── convert_md_to_docx.py     # md → docx（图片自动防溢出 A4）
+│   ├── verify_docx.py            # md 与 docx 逐事件对位校验
+│   └── README.md                 # 用法与常见坑
 ├── tech-doc-deai.md              # 规范文档副本（便于单独查阅）
 └── docs-mode-plugin.zip          # 本包的分发压缩包
 ```
@@ -45,8 +49,10 @@ docs-mode/
 
 ## 使用
 
-- **按模板写文书**：把模板贴进对话或给文件路径，说「按这个模板写一份 XX」。模式会加载 `doc-template-learning`，四维拆解后先出大纲、确认后撰写，并把骨架/风格卡保存到工作区 `docs/style-cards/` 供复用。
-- **去 AI 味**：创作完成后模式会主动询问是否去除 AI 味，确认后加载 `tech-doc-deai` 按规范改写（数字、版本号、命令原样保留）。
+- **按模板写文书**：把模板贴进对话或给文件路径，说「按这个模板写一份 XX」。模式会加载 `doc-template-learning`，四维拆解后先出大纲、**确认后才撰写**（硬性 gate），并把骨架/风格卡保存到工作区 `docs/style-cards/` 供复用。
+- **去 AI 味**：每次交付前模式会主动询问是否去除 AI 味（硬性检查点），确认后加载 `tech-doc-deai` 按规范改写（数字、版本号、命令原样保留）。
+- **转 Word**：优先使用随包 `assets/docx-tools/` 脚本（转换 + 校验），不要从零写转换脚本。
+- **引号规范**：正文一律中文引号“ ”，禁止英文双引号出现在正文。
 
 ## 自定义
 
