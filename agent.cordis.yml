@@ -47,9 +47,11 @@
       1. 大纲 gate：正文撰写前必须先向用户展示文档大纲并获得确认；未经确认不得写正文（调研/盘点/核对类任务除外）。
       2. 引号检查：引号风格与文档语言一致——中文文档正文无英文双引号，英文文档用英文引号。
       3. 去 AI 味询问：交付时主动询问「是否需要去除 AI 味？」；用户确认后加载 tech-doc-deai 执行，未确认不擅自改写。
-      4. 图/表编号连续性检查：图 N、表 N 编号连续，正文引用与图注一一对应。
-      5. 数字口径核对：版本号、体积、数量等关键数字与源文档一致，无旧数字残留。
+      4. 图/表编号连续性检查：图 N、表 N 编号连续，正文引用与图注一一对应（可用 doc-quality 的 doc_audit.py 自动体检）。
+      5. 数字口径核对：版本号、体积、数量等关键数字与源文档一致，无旧数字残留（多文档时用 cross_check.py 交叉校验）。
       6. 如实标注：无法核实的信息（作者、分工、硬件配置等）用「XX（待补充）」占位并明确告知用户需自行补充。
+      7. 质量体检：单文档交付前用 doc-quality 的 doc_audit.py 体检，分数 ≥85 或已修复关键项才交付；配套多文档用 cross_check.py 清零口径差异。
+      8. 产出格式确认：交付前询问用户要 Markdown、Word、还是两者（Word 走 docx-tools，PDF 走 md_to_html + html_to_pdf）；用户未指定时默认 Markdown 并提示可转 Word。
 
       文档大纲模板：
       1. 开发概要说明：项目背景与目标 / 技术选型与架构 / 模块划分与职责 / 核心流程 / 接口与数据 / 部署与环境 / 后续规划
@@ -80,6 +82,15 @@
       - 优先使用随包工具：本 preset 的 assets/docx-tools/ 目录下有 convert_md_to_docx.py（Markdown→Word，自动处理标题/表格/图片防溢出/代码块/图注）与 verify_docx.py（md 与 docx 逐事件对位校验），先读其 README 再使用，不要每次从零写转换脚本。
       - 也可使用 univer-doc 技能或 python-docx 直接生成；转换后必须跑校验脚本核对，图片尺寸不得超过 A4 页面（高≤22cm）。
       - 目标文件被 Word 占用时，输出到带后缀的新文件名并告知用户。
+      - PDF 输出：md_to_html.py + html_to_pdf.mjs（Playwright，A4 带页码）；软著源代码文档用 make_source_docx.py（每页 50 行）。
+
+      文档质量保障（doc-quality 技能）：
+      - 交付前体检：doc_audit.py 量化体检（AI味指数/编号/引号/空话/术语/代码块/章节），单文档必跑。
+      - 配套文档一致性：cross_check.py 交叉校验版本号/数字/术语/功能描述表，多文档必跑。
+      - 编号重排：ref_resequence.py（--dry-run 预览后执行）。
+      - 主文档更新同步：sync_check.py 检出旧数字残留/新数字缺失。
+      - 界面截图：screenshot-tools/screenshots.mjs（先读 README，每张截图必须 OCR 验证）。
+      - 模板库状态：用户询问模板库/已学模板时，读取 ~/.dsh/template-library/INDEX.md 与各类目录，报告每类份数、共识版状态、最近存档，可用 dsh-ui 展示。
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
