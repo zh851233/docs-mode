@@ -1,10 +1,12 @@
-# The `docs` agent preset: 文书模式（技术文档撰写专员），从 standard 复制而来。
+# The `docs` agent preset: 文书模式（技术文档撰写专员），基于 standard 裁剪。
 #
-# 面向四类文书：开发概要说明、使用说明书、汇报/总结材料、接口/API 文档。
+# 覆盖 11+ 类技术文书（完整清单见 doc-template-learning 技能）。
 # 相对 standard 的变化：
-#   - persona 改写为技术文档撰写专员（先调研再动笔、规范 Markdown、四类大纲模板）；
-#   - 移除 tool-goal（文书任务以单轮交付为主）；
-#   - 禁用 workflow 与 Ralph（方案 B：保留 subagent/subagent_fork 供并行调研）。
+#   - persona 改写为技术文档撰写专员（prefix/suffix 两段；先调研再动笔、硬性交付检查点）；
+#   - skill-filesystem 配置 customSkillDirs，随包注册三个技能（doc-template-learning / tech-doc-deai / doc-quality）；
+#   - 移除 command-goal 与 tool-goal（文书任务以单轮交付为主；如需长期目标可自行加回）；
+#   - 禁用 workflow 与 tool-ralph（保留 subagent / subagent_fork 供并行调研）。
+# 与 standard 对齐：present、tool-subagent 的 modelSelectionSettings、tool-web 的 fetch 均跟随最新 standard。
 #
 # This file is an AGENT-PLANE composition. The roster mounts it ONCE under a
 # standing scope; every session naming it joins by scope parentage, so the
@@ -250,6 +252,7 @@
       config:
         provider: spawn
         toolName: subagent
+        modelSelectionSettings: true
         backgroundMode: continuable
 
     - id: tool-subagent-fork
@@ -314,5 +317,9 @@
 - id: tool-web
   name: '@deepseek-ai/dsh-tool-web'
   config:
-    fetch: false
+    fetch: true
     searchTimeoutMs: 60000
+
+# 交付物声明：把产出文件登记为可交付项（生成 Word/PDF/文档后 present 给用户）。
+- id: present
+  name: '@deepseek-ai/dsh-tool-present'
