@@ -43,10 +43,16 @@ def extract_numbers(text):
         nums[key] = nums.get(key, 0) + 1
     return nums
 
+def strip_code(text):
+    """移除 fenced 代码块与行内代码——避免把代码标识符当成术语。"""
+    text = re.sub(r'^[ \t]*(```|~~~)[^\n]*\n.*?^[ \t]*\1[^\n]*$', '', text, flags=re.M | re.S)
+    text = re.sub(r'`[^`\n]+`', '', text)
+    return text
+
 def extract_terms(text):
-    """提取英文专名（出现≥2次的）。"""
+    """提取英文专名（出现≥2次的），排除代码块与行内代码中的标识符。"""
     terms = {}
-    for m in re.finditer(TERM_RE, text):
+    for m in re.finditer(TERM_RE, strip_code(text)):
         t = m.group(0)
         if len(t) < 3:
             continue

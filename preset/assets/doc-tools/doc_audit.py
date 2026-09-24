@@ -133,22 +133,52 @@ def scan_empty_lines(text):
                     issues.append(f'第{i}行疑似空话段：{s[:40]}')
     return issues
 
+def strip_code(text):
+    """移除 fenced 代码块与行内代码，返回用于正文级检查的文本。
+    术语/编号等检查只应看正文——代码标识符（如包名 `api`）不是术语写法错误。"""
+    # fenced 代码块（``` 或 ~~~ 围栏，配对的整块移除）
+    text = re.sub(r'^[ \t]*(```|~~~)[^\n]*\n.*?^[ \t]*\1[^\n]*$', '', text, flags=re.M | re.S)
+    # 行内代码
+    text = re.sub(r'`[^`\n]+`', '', text)
+    return text
+
 def scan_terms(text):
     issues = []
+    body = strip_code(text)  # 排除代码块与行内代码中的标识符
     for pat, canonical in TERM_PATTERNS:
-        variants = set(re.findall(pat, text))
+        variants = set(re.findall(pat, body))
         if len(variants) > 1:
             issues.append(f'术语「{canonical}」写法不一致：{"、".join(sorted(variants))}')
     return issues
 
 def scan_code_blocks(text):
+    """检查围栏闭合与「开始围栏」的语言标注。
+
+    结束围栏天然是裸的三个反引号，不能计入未标注——只检查成对围栏中的开始围栏
+    （第 1、3、5… 个），并以行号报告，便于定位。
+    """
     issues = []
-    fences = re.findall(r'^```(\w*)\s*$', text, re.M)
-    if len(fences) % 2 != 0:
+    fence_count = 0
+    unlabeled_lines = []
+    in_code = False
+    for lineno, line in enumerate(text.split('\n'), 1):
+        s = line.strip()
+        if not s.startswith('```'):
+            continue
+        fence_count += 1
+        if not in_code:
+            lang = s[3:].strip()
+            if not lang:
+                unlabeled_lines.append(lineno)
+            in_code = True
+        else:
+            in_code = False
+    if fence_count % 2 != 0:
         issues.append('代码块围栏数量为奇数——存在未闭合的代码块')
-    unlabeled = sum(1 for f in fences if not f.strip())
-    if unlabeled:
-        issues.append(f'有 {unlabeled} 个代码块未标注语言')
+    if unlabeled_lines:
+        shown = '、'.join(str(n) for n in unlabeled_lines[:5])
+        more = f' 等 {len(unlabeled_lines)} 处' if len(unlabeled_lines) > 5 else ''
+        issues.append(f'有 {len(unlabeled_lines)} 个开始围栏未标注语言（行 {shown}{more}）')
     return issues
 
 def scan_section_numbers(text):

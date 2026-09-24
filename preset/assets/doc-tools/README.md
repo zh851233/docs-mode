@@ -13,6 +13,19 @@
 | `md_to_html.py` | Markdown → HTML（PDF 链路第一步；--embed-images 内嵌图片） |
 | `html_to_pdf.mjs` | HTML → PDF（Playwright Chromium，A4、页码、页眉） |
 | `make_source_docx.py` | 软著源代码 Word 文档（每页 N 行、页眉软件名、文件清单表） |
+| `selftest.py` | 回归自测（纯标准库）：代码块检查、术语排除、引号、图号重排、跨文档一致性，共 15 项断言 |
+
+## 回归自测
+
+改动任何脚本后跑一遍，确保既有行为不回归：
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+python selftest.py     # 预期：15 通过，0 失败
+```
+
+自测固化了历史上出现过的误报场景（结束围栏被当成未标注语言、代码标识符被当成术语写法不一致、
+正文句被当成表题参与编号）；新增检查项时请同步补一条断言。
 
 ## 用法示例
 
@@ -52,3 +65,4 @@ python make_source_docx.py --out 源代码文档.docx --name "XX系统" --root "
 - **make_source_docx**：自动排除 node_modules/.git/dist/build/__pycache__/*.min.*/*.map；UTF-8 无法读取的文件会跳过并注明。
 - **PDF 中文**：Chromium 打印 PDF 依赖系统字体，中文字体（微软雅黑/宋体）需系统已安装；缺失时会出现方块字。
 - **体检误报**：doc_audit 的引号检查会跳过代码块（按 ``` 围栏识别）；表格内英文引号可能误报，人工复核时按上下文判断。
+- **代码块与术语**：术语一致性检查会排除 fenced 代码块与行内代码（`` `api` `` 这类标识符不算术语写法错误）；代码块语言标注只检查开始围栏（结束围栏天然无语言）。这两类曾误报，已由 `selftest.py` 固化防回归。
