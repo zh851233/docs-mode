@@ -33,24 +33,36 @@ DeepSeek Harness（DSH）技术文档撰写 Agent preset（模式）安装包，
 
 ```
 docs-mode/
-├── package.json                   # dsh.bundle 声明（插件市场可安装）
-├── cordis.patch.yml               # 注册 docs-mode-installer 插件行
-├── lib/index.js                   # 安装器：把 preset 部署到 ~/.dsh/.agent-presets/docs/
-├── preset/                        # 文书模式本体（拷贝到 .agent-presets/docs/ 即用）
+├── package.json                   # dsh.bundle 声明（npm 发布后可在插件市场安装）
+├── cordis.patch.yml               # 直接声明 preset-docs（不再拷贝目录）
+├── skills/                        # 随包技能（由 skill-filesystem 的 customSkillDirs 注册）
+│   ├── doc-template-learning/SKILL.md
+│   ├── tech-doc-deai/SKILL.md + tech-doc-deai.md
+│   └── doc-quality/SKILL.md       # 质量保障工作流
+├── assets/                        # 随包资产
+│   ├── docx-tools/                # Markdown⇄Word 转换与校验
+│   ├── doc-tools/                 # 质量保障脚本：体检/一致性/重排/同步/PDF/软著源码
+│   ├── screenshot-tools/          # Playwright 界面截图自动化
+│   └── templates/                 # 内置模板库 11 类 + 英文通用骨架
+├── preset/                        # 单一真源：模式定义与技能/资产原始文件
 │   ├── agent.cordis.yml           # 模式组合（persona + 工具集 + skill 注册）
 │   ├── preset.yml                 # 模式元数据（显示名、描述）
-│   ├── skills/
-│   │   ├── doc-template-learning/SKILL.md
-│   │   ├── tech-doc-deai/SKILL.md + tech-doc-deai.md
-│   │   └── doc-quality/SKILL.md   # 质量保障工作流
-│   └── assets/
-│       ├── docx-tools/            # Markdown⇄Word 转换与校验
-│       ├── doc-tools/             # 质量保障脚本：体检/一致性/重排/同步/PDF/软著源码
-│       ├── screenshot-tools/      # Playwright 界面截图自动化
-│       └── templates/             # 内置模板库 11 类 + 英文通用骨架
+│   ├── skills/                    # 由构建脚本铺到包根 skills/
+│   └── assets/                    # 由构建脚本铺到包根 assets/
 ├── tech-doc-deai.md               # 规范文档副本（便于单独查阅）
-└── docs-mode-plugin.zip           # 手动安装用的分发包
+└── tools/build.mjs                # 由 preset/ 生成 cordis.patch.yml + skills/ + assets/
 ```
+
+> **为什么只剩声明、不再有安装器**：dsh 0.2 起，用户 preset 目录
+> `$DSH_HOME/.agent-presets/<id>/` 已不再被读取
+> （见 `@deepseek-ai/dsh-agent-preset` 的 `skills/editing-cordis-compositions/SKILL.md`
+> 「Migrate a legacy preset」）。本包因此改为**自包含 bundle**：
+> 在 `cordis.patch.yml` 里直接 insert 一条 `@deepseek-ai/dsh-agent-preset` 声明，
+> 技能与资产随包携带，由声明按安装位置解析。
+>
+> 1.x 的安装器（`lib/index.js`，把 `preset/` 拷到 `.agent-presets/docs/`）已废弃，
+> 保留在仓库里仅供旧版本 dsh 使用，`files` 白名单已将其排除出发行包。
+
 
 ## 模板知识库（自主学习）
 
@@ -60,23 +72,69 @@ docs-mode/
 
 ## 安装
 
-**方式一：插件市场/直接安装（推荐）**
+**方式一：插件市场 / 按包名安装（推荐）**
+
+发布到 npm 后，在 DSH 桌面端的插件管理界面里搜索 `dsh-docs-mode` 安装即可；
+或直接：
+
+```sh
+dsh plugin add dsh-docs-mode
+```
+
+也可以从仓库地址安装（GitHub 源）：
 
 ```sh
 dsh plugin add https://github.com/zh851233/docs-mode
 ```
 
-安装器会把 preset 内容（`preset/` 目录）部署到 `~/.dsh/.agent-presets/docs/`，然后重启 DSH，模式选择器即出现「文书模式」。已存在时不覆盖（如需强制覆盖：`DSH_DOCS_MODE_FORCE=1 dsh plugin add ...`）。
+安装完成后**重启 DSH**，新建会话时在模式选择器里选择「文书模式」。
 
-**方式二：手动拷贝**
+> 包内已声明 `dsh.bundle.patch`，插件管理器会把它作为 profile 层加载并自动登记
+> 到 `dsh.profile.bundles` —— 不需要手工改配置，也不会出现"装了不生效"。
 
-1. 将本仓库 `preset/` 目录内容拷贝到 DSH 用户 preset 根：
-   - Windows：`%USERPROFILE%\.dsh\.agent-presets\docs\`
-   - Linux/macOS：`~/.dsh/.agent-presets/docs/`
-2. 重启 DSH。
-3. 新建会话，模式选择器中选择「文书模式」。
+**方式二：从本地源码安装**
 
-> 本包已通过 `agentPresets.standingKeyFor` 挂载校验（mounted OK）。
+```sh
+git clone https://github.com/zh851233/docs-mode
+dsh plugin add /绝对路径/docs-mode
+```
+
+注意路径必须是**绝对路径**：插件管理器的 spec 解析拒绝相对路径
+（浏览器里输入的相对路径对服务端没有意义）。
+
+**方式三：手动放置（不使用包管理器）**
+
+把发行包解压后放进当前 profile 的 `node_modules/`，并在该 profile 的
+`package.json` 的 `dsh.profile.bundles` 里加上 `dsh-docs-mode`，然后重启。
+两条都要做——只放文件不登记 `bundles`，插件不会被加载。
+
+## 从 1.x 升级
+
+1.x 走的是「把 `preset/` 拷到 `$DSH_HOME/.agent-presets/docs/`」的安装器模式，
+**该目录自 dsh 0.2 起已不再被读取**，升级后模式会从选择器里消失。
+
+装 2.0 时应清除旧目录：
+
+```sh
+# Windows
+rmdir /s /q "%USERPROFILE%\.dsh\.agent-presets\docs"
+# Linux/macOS
+rm -rf ~/.dsh/.agent-presets/docs
+```
+
+旧的 `lib/index.js` 安装器已废弃（仍留在仓库里供旧版 dsh 使用，但不随发行包发布）。
+
+## 开发
+
+`preset/` 是单一真源。改完模式定义或技能/资产后，重新生成包根产物：
+
+```sh
+node tools/build.mjs
+```
+
+它会由 `preset/` 生成 `cordis.patch.yml`、`skills/`、`assets/`，
+并在写出后**立即用 YAML 解析自检**（结构错误会以非零退出码报出）。
+
 
 ## 使用
 
