@@ -113,16 +113,17 @@ dsh plugin add /绝对路径/docs-mode
 
 ## 从 1.x / 2.0 升级
 
-2.1.0 起恢复「安装器把 \preset/\ 部署到 \/.agent-presets/docs/\」的做法——该目录在 dsh 0.2 下仍被 \@deepseek-ai/dsh-agent-presets\ 作为默认 user root 扫描（\includeUserRoot\），所以旧部署本身有效。
+2.1.0 起恢复「安装器把 `preset/` 部署到 `$DSH_HOME/.agent-presets/docs/`」的做法——该目录在 dsh 0.2 下仍被 `@deepseek-ai/dsh-agent-presets` 作为默认 user root 扫描（`includeUserRoot`），所以旧部署本身有效。
 
-v2.0.0 曾把 preset 直接写进 \cordis.patch.yml\ 的 roster 声明里，包名与 schema 都不对（单数 \@deepseek-ai/dsh-agent-preset\ 不存在、roster 不接受 \plugins\ 字段），**装 2.0 的 profile 里 bundle 加载会失败**。请升级到 2.1.0：
+v2.0.0 曾把 preset 直接写进 `cordis.patch.yml` 的 roster 声明里，包名与 schema 都不对（单数 `@deepseek-ai/dsh-agent-preset` 不存在、roster 不接受 `plugins` 字段），**装 2.0 的 profile 里 bundle 加载会失败**。请升级到 2.1.0：
 
-\\sh
+```sh
 dsh plugin --profile <你的 profile> add https://github.com/zh851233/docs-mode
 # 或本地源码
 dsh plugin --profile <你的 profile> add /绝对路径/docs-mode
-\
-升级后重启 DSH。旧目录若已存在，安装器会跳过（幂等）；要强制覆盖成最新内容：设环境变量 \DSH_DOCS_MODE_FORCE=1\ 后重启，或先删掉 \%USERPROFILE%\.dsh\.agent-presets\docs\ 再重启。
+```
+
+升级后重启 DSH。旧目录若已存在，安装器会跳过（幂等）；要强制覆盖成最新内容：设环境变量 `DSH_DOCS_MODE_FORCE=1` 后重启，或先删掉 `%USERPROFILE%\\.dsh\\.agent-presets\\docs` 再重启。
 
 ## 开发
 
