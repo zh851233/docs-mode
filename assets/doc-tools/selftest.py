@@ -124,6 +124,45 @@ out, mapping, caps = reseq.collect_and_resequence(open(t, encoding='utf-8').read
 check('正文句不被误判为表题', len(caps) == 1, f'实际 {len(caps)} 个表题锚点')
 os.remove(t)
 
+print('== verify_docx_format：格式校验 ==')
+# 14. 规范文档（A4 + 宋体正文）应无硬性问题
+try:
+    from docx import Document
+    from docx.shared import Cm, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    fd, docx_path = tempfile.mkstemp(suffix='.docx')
+    os.close(fd)
+    d = Document()
+    sec = d.sections[0]
+    sec.page_width, sec.page_height = Cm(21.0), Cm(29.7)
+    h = d.add_heading('标题', level=1)
+    for r in h.runs:
+        r.font.name = '黑体'; r.font.size = Pt(16); r.bold = True
+    p = d.add_paragraph('这是一段正文，使用宋体 12pt。')
+    for r in p.runs:
+        r.font.name = '宋体'; r.font.size = Pt(12)
+    d.save(docx_path)
+    fmt = load('verify_docx_format')
+    rules = fmt.load_rules('technical', None)
+    r = fmt.check(docx_path, rules)
+    page_issue = [i for i in r['issues'] if '页面' in i]
+    check('规范 A4 文档无页面尺寸告警', page_issue == [], f'实际 {page_issue}')
+    os.remove(docx_path)
+
+    # 15. Letter 页面必须被检出（21.6x27.9）
+    fd, docx_path = tempfile.mkstemp(suffix='.docx')
+    os.close(fd)
+    d = Document()
+    sec = d.sections[0]
+    sec.page_width, sec.page_height = Cm(21.6), Cm(27.9)
+    d.add_paragraph('正文')
+    d.save(docx_path)
+    r = fmt.check(docx_path, rules)
+    check('Letter 页面被检出', any('页面尺寸' in i for i in r['issues']), f'实际 {r["issues"]}')
+    os.remove(docx_path)
+except ImportError:
+    print('  SKIP python-docx 未安装，跳过格式校验用例')
+
 print()
 print(f'结果：{passed} 通过，{len(failed)} 失败')
 if failed:
