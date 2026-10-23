@@ -135,16 +135,12 @@ const patch = `${header}- insert:
       name: '${PKG_NAME}'
 `
 
-// ── 铺 skills/ 与 assets/ ──────────────────────────────────────────────────
-for (const d of ['skills', 'assets']) {
-  const dest = join(REPO, d)
-  if (existsSync(dest)) rmSync(dest, { recursive: true, force: true })
-  cpSync(join(SRC, d), dest, { recursive: true })
-  const n = countFiles(dest)
-  console.log(`  · ${d}/  (${n} 个文件)`)
-}
+// ── 只生成 cordis.patch.yml（preset/ 是自包含的：skills/ assets/ 都在里面） ──
+// 不再向包根铺 skills/、assets/ —— 安装器部署的是 preset/，包根副本只会让发行包
+// 体积翻倍并与 preset/ 内容漂移。
 writeFileSync(join(REPO, 'cordis.patch.yml'), patch, 'utf8')
 console.log('  · cordis.patch.yml  (UTF-8 无 BOM)')
+console.log('  · preset/ 自包含（skills/ 与 assets/ 随 preset 一起部署）')
 
 // ── 生成即自检 ─────────────────────────────────────────────────────────────
 function countFiles(dir) {

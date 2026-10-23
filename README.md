@@ -33,25 +33,17 @@ DeepSeek Harness（DSH）技术文档撰写 Agent preset（模式）安装包，
 
 ```
 docs-mode/
-├── package.json                   # dsh.bundle 声明（npm 发布后可在插件市场安装）
-├── cordis.patch.yml               # 直接声明 preset-docs（不再拷贝目录）
-├── skills/                        # 随包技能（由 skill-filesystem 的 customSkillDirs 注册）
-│   ├── doc-template-learning/SKILL.md
-│   ├── tech-doc-deai/SKILL.md + tech-doc-deai.md
-│   └── doc-quality/SKILL.md       # 质量保障工作流
-├── assets/                        # 随包资产
-│   ├── docx-tools/                # Markdown⇄Word 转换与校验
-│   ├── doc-tools/                 # 质量保障脚本：体检/一致性/重排/同步/PDF/软著源码
-│   ├── screenshot-tools/          # Playwright 界面截图自动化
-│   └── templates/                 # 内置模板库 11 类 + 英文通用骨架
-├── preset/                        # 单一真源：模式定义与技能/资产原始文件
+├── package.json                   # dsh.bundle 声明（npm 发布后可在插件市场按包名安装）
+├── cordis.patch.yml               # 生成的 bundle 入口：insert 一条安装器声明
+├── lib/index.js                   # 安装器：把 preset/ 部署到 $DSH_HOME/.agent-presets/docs/
+├── preset/                        # 单一真源（自包含：模式定义 + 技能 + 资产）
 │   ├── agent.cordis.yml           # 模式组合（persona + 工具集 + skill 注册）
 │   ├── preset.yml                 # 模式元数据（显示名、描述）
-│   ├── skills/                    # 由构建脚本铺到包根 skills/
-│   └── assets/                    # 由构建脚本铺到包根 assets/
-├── tech-doc-deai.md               # 规范文档副本（便于单独查阅）
-└── tools/build.mjs                # 由 preset/ 生成 cordis.patch.yml + skills/ + assets/
-```
+│   ├── skills/                    # 三个技能：doc-template-learning / tech-doc-deai / doc-quality
+│   └── assets/                    # doc-tools / docx-tools / screenshot-tools / templates(12 类)
+├── tools/build.mjs                # 由 preset/ 生成 cordis.patch.yml（不再铺包根副本）
+└── README.md
+
 
 > **安装器为什么需要**：`@deepseek-ai/dsh-agent-presets`（roster 服务）的默认
 > `includeUserRoot` 会扫描 `$DSH_HOME/.agent-presets/`，所以第三方 preset 的正确投放位置
