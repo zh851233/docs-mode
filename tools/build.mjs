@@ -112,25 +112,27 @@ const header = `# docs-mode bundle —— 文书模式（技术文档撰写专�
 # 本文件由 tools/build.mjs 从 preset/ 生成，请勿手工编辑：
 # 改动模式定义请编辑 preset/agent.cordis.yml，改动元数据请编辑 preset/preset.yml。
 #
-# 自包含 preset bundle：安装后由 @deepseek-ai/dsh-agent-preset 直接声明，
-# 不再向 $DSH_HOME/.agent-presets/ 拷贝目录（该格式自 dsh 0.2 起已废弃）。
+# 安装方式：bundle 加载时由本包的 lib/index.js（安装器）把 preset/ 部署到
+#   $DSH_HOME/.agent-presets/docs/ —— 该目录是 @deepseek-ai/dsh-agent-presets
+#   的默认 user root（includeUserRoot，见其 README「使用本包」），dsh 0.2 仍然扫描它。
+#   删掉本声明会让 bundle 装载后什么都不做，所以不要手删。
+#
+# 为什么不是「在 patch 里直接声明 preset」：
+#   @deepseek-ai/dsh-agent-presets 是进程级 roster 服务，Config 只接受
+#   default / roots / includeShippedRoot / includeUserRoot —— 在 bundle 里 insert
+#   单个 preset 的 id/name/plugins 既不是它的 schema，也会与 host 的同名服务相撞。
 #
 # 随包资产：
-#   skills/  doc-template-learning / tech-doc-deai / doc-quality
-#   assets/  doc-tools / docx-tools / screenshot-tools / templates(11 类)
+#   preset/skills/  doc-template-learning / tech-doc-deai / doc-quality
+#   preset/assets/  doc-tools / docx-tools / screenshot-tools / templates
 #
-# 技能与资产路径通过「从 DSH profile 清单解析本包」得到，跨机器、跨 DSH_HOME 均成立。
+# 技能与资产路径由 preset 内的 skill-filesystem customSkillDirs 以 baseUrl 解析，
+# 部署到 .agent-presets/docs/ 后 skills/ 就在 preset 目录旁，跨机器成立。
 `
 
 const patch = `${header}- insert:
-    - id: preset-docs
-      name: '@deepseek-ai/dsh-agent-preset'
-      config:
-        id: ${id}
-        name: ${JSON.stringify(name)}
-        description: ${JSON.stringify(description)}
-        plugins:
-${pluginsBlock}
+    - id: docs-mode-installer
+      name: '${PKG_NAME}'
 `
 
 // ── 铺 skills/ 与 assets/ ──────────────────────────────────────────────────
@@ -155,19 +157,15 @@ function countFiles(dir) {
 }
 
 const problems = []
-if (!patch.includes(`c.resolve('${PKG_NAME}/package.json')`)) problems.push('patch 未解析本包名')
-if (!/\),'skills'\)/.test(patch)) problems.push('skills 解析表达式缺失')
-if (!/\),'assets'\)/.test(patch)) problems.push('assets 解析表达式缺失')
 if (!/^- insert:/m.test(patch)) problems.push('缺少顶层 insert')
-if (!patch.includes('id: preset-docs')) problems.push('缺少 preset-docs 声明')
-if (!patch.includes(`id: ${id}`)) problems.push('config.id 缺失')
-if (/\$\{[^}]*\},'assets'/.test(patch)) problems.push('存在逗号运算符误用')
-const pluginRows = [...patch.matchAll(/^\s{10}- id: /gm)].length
-if (pluginRows < 10) problems.push(`插件条目过少(${pluginRows})`)
+if (!patch.includes('id: docs-mode-installer')) problems.push('缺少安装器声明')
+if (!patch.includes(`name: '${PKG_NAME}'`)) problems.push('安装器未指向本包')
+if (!existsSync(join(REPO, 'lib', 'index.js'))) problems.push('缺少安装器 lib/index.js')
+if (!existsSync(join(SRC, 'skills'))) problems.push('preset/skills 缺失')
+if (!existsSync(join(SRC, 'assets'))) problems.push('preset/assets 缺失')
 
 console.log('\n=== 自检 ===')
-console.log(`  声明 id=preset-docs   config.id=${id}   name=${name}`)
-console.log(`  顶层插件条目=${pluginRows}`)
+console.log(`  声明 id=docs-mode-installer   name=${PKG_NAME}`)
 console.log(`  patch 字节数=${Buffer.byteLength(patch, 'utf8')}`)
 if (problems.length) {
   console.error('  ❌ ' + problems.join('; '))

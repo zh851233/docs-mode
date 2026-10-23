@@ -53,15 +53,16 @@ docs-mode/
 └── tools/build.mjs                # 由 preset/ 生成 cordis.patch.yml + skills/ + assets/
 ```
 
-> **为什么只剩声明、不再有安装器**：dsh 0.2 起，用户 preset 目录
-> `$DSH_HOME/.agent-presets/<id>/` 已不再被读取
-> （见 `@deepseek-ai/dsh-agent-preset` 的 `skills/editing-cordis-compositions/SKILL.md`
-> 「Migrate a legacy preset」）。本包因此改为**自包含 bundle**：
-> 在 `cordis.patch.yml` 里直接 insert 一条 `@deepseek-ai/dsh-agent-preset` 声明，
-> 技能与资产随包携带，由声明按安装位置解析。
+> **安装器为什么需要**：`@deepseek-ai/dsh-agent-presets`（roster 服务）的默认
+> `includeUserRoot` 会扫描 `$DSH_HOME/.agent-presets/`，所以第三方 preset 的正确投放位置
+> 就是该目录（见其 README「使用本包」）。roster 是进程级单例，Config 只接受
+> `default` / `roots` / `includeShippedRoot` / `includeUserRoot`——在 bundle 的 patch 里
+> **不能**直接 insert 一个 preset 的 `id/name/plugins`（v2.0.0 曾这样做，是坏的）。
+> 本包因此用 `lib/index.js` 安装器：bundle 加载时把 `preset/` 部署到
+> `$DSH_HOME/.agent-presets/docs/`，重启后 roster 扫描到它。
 >
-> 1.x 的安装器（`lib/index.js`，把 `preset/` 拷到 `.agent-presets/docs/`）已废弃，
-> 保留在仓库里仅供旧版本 dsh 使用，`files` 白名单已将其排除出发行包。
+> 技能与资产随 `preset/` 一起落位，由 preset 内 `skill-filesystem` 的
+> `customSkillDirs`（相对 `baseUrl` 解析）注册，跨机器成立。
 
 
 ## 模板知识库（自主学习）
@@ -72,25 +73,27 @@ docs-mode/
 
 ## 安装
 
-**方式一：插件市场 / 按包名安装（推荐）**
+**方式一：插件管理界面 / 命令行（推荐）**
 
-发布到 npm 后，在 DSH 桌面端的插件管理界面里搜索 `dsh-docs-mode` 安装即可；
-或直接：
+在 DSH 桌面端的「添加插件」对话框里输入以下任一种，然后点安装：
 
-```sh
-dsh plugin add dsh-docs-mode
-```
+- `https://github.com/zh851233/docs-mode`（GitHub 仓库地址）
+- `zh851233/docs-mode`（owner/repo 简写）
+- `dsh-docs-mode`（包名——需先发布到 npm）
 
-也可以从仓库地址安装（GitHub 源）：
+或命令行：
 
 ```sh
 dsh plugin add https://github.com/zh851233/docs-mode
 ```
 
-安装完成后**重启 DSH**，新建会话时在模式选择器里选择「文书模式」。
+> 市场条目（awesome-dsh-plugin）已收录本插件，安装目标会自动落在
+> `github:zh851233/docs-mode`（条目 `npm` 为空时的兜底路径）。
 
-> 包内已声明 `dsh.bundle.patch`，插件管理器会把它作为 profile 层加载并自动登记
-> 到 `dsh.profile.bundles` —— 不需要手工改配置，也不会出现"装了不生效"。
+安装完成后**重启 DSH**（安装器在 bundle 加载时部署 preset），新建会话时在模式选择器里选择「文书模式」。
+
+> 包内声明了 `dsh.bundle.patch`，插件管理器会把它作为 profile 层加载并自动登记
+> 到 `dsh.profile.bundles` —— 不需要手工改配置。
 
 **方式二：从本地源码安装**
 
@@ -108,21 +111,18 @@ dsh plugin add /绝对路径/docs-mode
 `package.json` 的 `dsh.profile.bundles` 里加上 `dsh-docs-mode`，然后重启。
 两条都要做——只放文件不登记 `bundles`，插件不会被加载。
 
-## 从 1.x 升级
+## 从 1.x / 2.0 升级
 
-1.x 走的是「把 `preset/` 拷到 `$DSH_HOME/.agent-presets/docs/`」的安装器模式，
-**该目录自 dsh 0.2 起已不再被读取**，升级后模式会从选择器里消失。
+2.1.0 起恢复「安装器把 \preset/\ 部署到 \/.agent-presets/docs/\」的做法——该目录在 dsh 0.2 下仍被 \@deepseek-ai/dsh-agent-presets\ 作为默认 user root 扫描（\includeUserRoot\），所以旧部署本身有效。
 
-装 2.0 时应清除旧目录：
+v2.0.0 曾把 preset 直接写进 \cordis.patch.yml\ 的 roster 声明里，包名与 schema 都不对（单数 \@deepseek-ai/dsh-agent-preset\ 不存在、roster 不接受 \plugins\ 字段），**装 2.0 的 profile 里 bundle 加载会失败**。请升级到 2.1.0：
 
-```sh
-# Windows
-rmdir /s /q "%USERPROFILE%\.dsh\.agent-presets\docs"
-# Linux/macOS
-rm -rf ~/.dsh/.agent-presets/docs
-```
-
-旧的 `lib/index.js` 安装器已废弃（仍留在仓库里供旧版 dsh 使用，但不随发行包发布）。
+\\sh
+dsh plugin --profile <你的 profile> add https://github.com/zh851233/docs-mode
+# 或本地源码
+dsh plugin --profile <你的 profile> add /绝对路径/docs-mode
+\
+升级后重启 DSH。旧目录若已存在，安装器会跳过（幂等）；要强制覆盖成最新内容：设环境变量 \DSH_DOCS_MODE_FORCE=1\ 后重启，或先删掉 \%USERPROFILE%\.dsh\.agent-presets\docs\ 再重启。
 
 ## 开发
 
