@@ -18,6 +18,8 @@ description: 文档质量保障工具集。当用户要求检查/体检/核验�
 | `md_to_html.py` | Markdown → HTML（PDF 链路第一步） | `python md_to_html.py <in.md> <out.html> [--embed-images]` |
 | `html_to_pdf.mjs` | HTML → PDF（Playwright Chromium，A4 + 页码） | `node html_to_pdf.mjs <in.html> <out.pdf>` |
 | `make_source_docx.py` | 软著源代码文档（每页 N 行默认 50、页眉页脚、文件清单） | `python make_source_docx.py --out x.docx --name 软件名 --root 源码目录 [--include app] [--lines-per-page 50]` |
+| `verify_docx_format.py` | **docx 格式规范校验**：页面/标题/正文字体字号/缩进分布/行距/表格边框/图片尺寸（按段落类型分组） | `python verify_docx_format.py <doc.docx> [--profile technical|academic] [--config rules.json]` |
+| `make_diagrams.py` | **程序化生成示意图**：时序图/流程图（内置 TCP 握手/TCP 挥手/实验流程预设） | `python make_diagrams.py --preset tcp-handshake --out x.png` 或 `--config x.json` |
 
 截图自动化在 `assets/screenshot-tools/screenshots.mjs`（先读 README）。
 
@@ -27,6 +29,12 @@ description: 文档质量保障工具集。当用户要求检查/体检/核验�
 - 新文档完成后：`python doc_audit.py <doc.md>`。
 - 解读：分数 ≥85 良好；<85 按明细修复（AI味句式/编号/引号/空话/术语/代码块/章节）。
 - 图/表编号问题优先用 `ref_resequence.py --dry-run` 预览，确认后执行重排。
+- **Word 交付额外做格式校验**：`python verify_docx_format.py <doc.docx> [--profile academic]`。按段落类型分组检查，缩进/行距等非硬性项只作统计；**不要自创"缩进段落数 >= N"这类标准**，也不要为了消除报告去改坏文档。
+
+### 1b. 示意图（文档需要时序图/流程图且无现成图时）
+- 优先 `make_diagrams.py`：`--preset tcp-handshake | tcp-close | experiment-flow`，或写 JSON 配置自定义。
+- 生成的图写入文档时，正文与图注必须注明「示意图」，不得冒充真实截图。
+- 生成后用 OCR/视觉工具核对中文渲染与箭头指向（见截图验证规则）。
 
 ### 2. 多文档一致性（配套文档必跑）
 - 两份以上配套文档（使用说明书 + 开发概要说明书 等）：`python cross_check.py a.md b.md`。
