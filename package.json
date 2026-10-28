@@ -1,6 +1,6 @@
 {
   "name": "dsh-docs-mode",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "文书模式（docs-mode）：技术文档撰写 Agent preset。覆盖 11+ 类技术文书，含模板知识库、去 AI 味与质量保障工具集。随包携带三个技能与模板/工具脚本，装完即用。",
   "type": "module",
   "license": "MIT",

@@ -149,14 +149,17 @@
 # `tool-skill` gives them the catalog and loader; the merged catalog also
 # carries whatever the deployment registered globally (repository plugins).
 #
-# 随 preset 打包的技能（doc-template-learning、tech-doc-deai）位于本目录的
-# skills/ 下，通过 customSkillDirs 注册；`baseUrl` 是 preset 自己的目录，
-# 所以整个目录拷贝/压缩到任何机器的 ~/.dsh/.agent-presets/ 下，技能随包生效。
+# 随 preset 打包的技能（doc-template-learning / tech-doc-deai / doc-quality）
+# 落在本 preset 目录的 skills/ 下，必须经 customSkillDirs 指过去才能被发现。
+# 这里用 {{PRESET_DIR}} 占位符而不是 !!js/baseUrl：
+#   - 安装器（lib/index.js）部署时把它替换成真实绝对路径（因机器而异）；
+#   - 老版本 dsh（如 0.2.1-rc.3）的 loader 在 preset 作用域可能不提供 baseUrl，
+#     !!js 求值失败会让整个 preset 挂载失败。
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
   config:
     customSkillDirs:
-      - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
+      - '{{PRESET_DIR}}/skills'
 
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'

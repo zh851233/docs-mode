@@ -1,24 +1,21 @@
 # docs-mode bundle —— 文书模式（技术文档撰写专员）
 #
-# 本文件由 tools/build.mjs 从 preset/ 生成，请勿手工编辑：
-# 改动模式定义请编辑 preset/agent.cordis.yml，改动元数据请编辑 preset/preset.yml。
+# 本文件由 tools/build.mjs 生成，请勿手工编辑：
+#   改动模式定义 → preset/agent.cordis.yml
+#   改动模式元数据 → preset/preset.yml
+#   改动安装器逻辑 → lib/index.js
 #
 # 安装方式：bundle 加载时由本包的 lib/index.js（安装器）把 preset/ 部署到
 #   $DSH_HOME/.agent-presets/docs/ —— 该目录是 @deepseek-ai/dsh-agent-presets
-#   的默认 user root（includeUserRoot，见其 README「使用本包」），dsh 0.2 仍然扫描它。
-#   删掉本声明会让 bundle 装载后什么都不做，所以不要手删。
+#   的默认 user root（includeUserRoot），所以重启后 roster 能扫到「文书模式」。
 #
 # 为什么不是「在 patch 里直接声明 preset」：
 #   @deepseek-ai/dsh-agent-presets 是进程级 roster 服务，Config 只接受
 #   default / roots / includeShippedRoot / includeUserRoot —— 在 bundle 里 insert
 #   单个 preset 的 id/name/plugins 既不是它的 schema，也会与 host 的同名服务相撞。
 #
-# 随包资产：
-#   preset/skills/  doc-template-learning / tech-doc-deai / doc-quality
-#   preset/assets/  doc-tools / docx-tools / screenshot-tools / templates
-#
-# 技能与资产路径由 preset 内的 skill-filesystem customSkillDirs 以 baseUrl 解析，
-# 部署到 .agent-presets/docs/ 后 skills/ 就在 preset 目录旁，跨机器成立。
+# 技能路径：preset/agent.cordis.yml 的 customSkillDirs 用 '{{PRESET_DIR}}/skills'
+#   占位符，安装器部署时替换成真实绝对路径（不依赖 !!js/baseUrl）。
 - insert:
     - id: docs-mode-installer
       name: 'dsh-docs-mode'
