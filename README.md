@@ -134,6 +134,24 @@ dsh plugin --profile <你的 profile> add /绝对路径/docs-mode
 | 改完源码不生效 | `file:` 安装是**复制**进 `node_modules`，源目录更新不会自动同步 | 重新安装，或手动覆盖 `profiles/<name>/node_modules/dsh-docs-mode` |
 | bundle 加载失败/缺 `index.js` | `package.json` 缺 `main` / `exports` | 必须声明 `"main": "lib/index.js"` |
 
+### 内容一致性检查（防前后矛盾）
+
+```sh
+python assets/doc-tools/check_consistency.py 报告.md --strict
+```
+
+交付前跑一遍，检测五类问题：
+
+| 规则 | 例子 |
+|---|---|
+| 时延表述矛盾 | 「往返时延」一处写「一半」，另一处写「完整 RTT」 |
+| 同一量多值 | 正文说「4662 字」，摘要又说「约 5000 字」 |
+| 占位值泄露 | 占位框写了具体数值，用户可能抄进「待填」数据表 |
+| 序号基准混用 | 相对序号与绝对序号未区分 |
+| 术语漂移 | 确认号 / ack / ACK 号混用 |
+
+高危项退出码 1，可直接拦在交付前；`doc-template-learning` 技能 A6 已要求交付前执行。
+
 ### 一键更新（推荐）
 
 ```powershell
