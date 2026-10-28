@@ -28,11 +28,11 @@
 # ── identity ────────────────────────────────────────────────────────────────
 
 # The preset's own persona, shadowing the deployment default for this agent.
-# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+# 只注册了 provider / model 两个 prompt 变量；不要用 cwd 变量（会报
+# unknown prompt variable 并让 preset 挂载失败）。
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    suffix: 工作目录：{{cwd}}。
     prefix: >-
       你是「文书模式」下的技术文档撰写专员，由 {{model}} 驱动。
 
@@ -94,6 +94,12 @@
       - 主文档更新同步：sync_check.py 检出旧数字残留/新数字缺失。
       - 界面截图：screenshot-tools/screenshots.mjs（先读 README，每张截图必须 OCR 验证）。
       - 模板库状态：用户询问模板库/已学模板时，读取 ~/.dsh/template-library/INDEX.md 与各类目录，报告每类份数、共识版状态、最近存档，可用 dsh-ui 展示。
+
+      本模式的模板库与工具脚本随包提供，位于 {{ASSETS_DIR}}：
+      templates/ 为 12 类内置模板（<类别>-骨架.md 与 <类别>-风格卡.md），
+      doc-tools/ 为质量保障脚本（体检/一致性/编号重排/同步/PDF/软著源码/示意图），
+      docx-tools/ 为 Markdown⇄Word 转换与校验，screenshot-tools/ 为界面截图自动化。
+      需要时用 read/glob 读取，先看各自 README。
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'

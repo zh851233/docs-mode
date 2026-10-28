@@ -117,6 +117,41 @@ dsh plugin --profile <你的 profile> add /绝对路径/docs-mode
 
 升级后重启 DSH。旧目录若已存在，安装器会跳过（幂等）；要强制覆盖成最新内容：设环境变量 `DSH_DOCS_MODE_FORCE=1` 后重启，或先删掉 `%USERPROFILE%\\.dsh\\.agent-presets\\docs` 再重启。
 
+## 兼容性与故障排查
+
+### 支持的 dsh 版本
+
+本插件按 **dsh 0.2.x 声明式 preset** 适配：在 `cordis.patch.yml` 里 insert 一条
+`@deepseek-ai/dsh-agent-preset` 声明（`id: preset-docs` + `config.plugins` 内嵌模式定义）。
+`$DSH_HOME/.agent-presets/` 目录扫描机制在部分版本已废弃，不要依赖它。
+
+### 四个已知坑（都踩过）
+
+| 现象 | 原因 | 修复 |
+|---|---|---|
+| 装好了但模式选择器没有「文书模式」 | `package.json` 带 UTF-8 BOM → `JSON.parse` 失败 → bundle 被**静默跳过** | 去掉 BOM：`python -c "d=open(p,'rb').read(); open(p,'wb').write(d[3:])"` |
+| 报 `unknown prompt variable "{{cwd}}"` | dsh 0.2.1-rc.3 只注册 `provider` / `model` 两个 prompt 变量，没有 `cwd` | persona 里只用 `{{model}}`；不要写 `{{cwd}}`（连注释里也别写，避免误判） |
+| 改完源码不生效 | `file:` 安装是**复制**进 `node_modules`，源目录更新不会自动同步 | 重新安装，或手动覆盖 `profiles/<name>/node_modules/dsh-docs-mode` |
+| bundle 加载失败/缺 `index.js` | `package.json` 缺 `main` / `exports` | 必须声明 `"main": "lib/index.js"` |
+
+### 一条命令诊断
+
+```sh
+node tools/doctor.mjs                 # 检查 desktop profile
+node tools/doctor.mjs --profile web   # 检查指定 profile
+node tools/doctor.mjs --source D:/work/docs-mode   # 同时对比源目录与副本
+```
+
+doctor 会检查：package.json 无 BOM / 有 main / 入口存在、patch 声明 preset-docs、
+prompt 变量白名单、preset+skills+assets 存在、file: 源与副本版本与 patch 是否一致。
+
+### 发布前检查
+
+```sh
+node tools/build.mjs     # 生成 patch + 结构自检（含 prompt 变量白名单检查）
+node tools/doctor.mjs    # 安装态自检
+```
+
 ## 开发
 
 `preset/` 是单一真源。改完模式定义或技能/资产后，重新生成包根产物：

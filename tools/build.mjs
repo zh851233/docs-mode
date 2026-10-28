@@ -73,25 +73,18 @@ body = body.replace(
   `# 随包携带的技能位于包内 skills/ 下，通过 customSkillDirs 注册。路径写法是\n$1# 「从 DSH profile 清单解析本包安装目录」——bundle 装在 profile 的 node_modules\n$1# 里，因此跨机器、跨 DSH_HOME 均成立。`,
 )
 
-// ── 改写 1b：persona suffix 告知资产位置 ────────────────────────────────────
-const SUFFIX_ANCHOR = '    suffix: 工作目录：{{cwd}}。'
-const SUFFIX_NEW = `    suffix: |-
-      工作目录：{{cwd}}。
-      本模式的模板库与工具脚本随包提供，位于：${resolverFor('assets')}
-      其中 templates/ 为 11 类内置模板（<类别>-骨架.md 与 <类别>-风格卡.md），
-      doc-tools/ 为质量保障脚本，docx-tools/ 为 Markdown⇄Word 转换与校验，
-      screenshot-tools/ 为界面截图自动化。需要时用 read/glob 读取，先看各自 README。`
-if (body.includes(SUFFIX_ANCHOR)) body = body.replace(SUFFIX_ANCHOR, SUFFIX_NEW)
-else console.warn('  ! persona suffix 锚点未命中，跳过资产路径注入')
+// ── 改写 1b：注入资产路径（prefix 内用 {{ASSETS_DIR}} 占位符） ──────────────
+// 注意：只注册了 {{provider}} / {{model}} 两个 prompt 变量，不能出现 {{cwd}}。
+body = body.replace('{{ASSETS_DIR}}', resolverFor('assets'))
 
 // ── 改写 2：移除 dsh 0.2 已不存在的插件行 ──────────────────────────────────
 // dsh-workflow-worker-thread 在 0.2.0-rc2 中已无此包；文书模式本就禁用 workflow。
 const kept = []
 let skipping = false
 for (const line of body.split('\n')) {
-  if (/^- id: workflow-worker-thread\s*$/.test(line)) { skipping = true; continue }
+  if (/^\s*- id: workflow-worker-thread\s*$/.test(line)) { skipping = true; continue }
   if (skipping) {
-    if (/^- id: /.test(line)) skipping = false
+    if (/^\s*- id: /.test(line)) skipping = false
     else continue
   }
   kept.push(line)
