@@ -134,6 +134,20 @@ dsh plugin --profile <你的 profile> add /绝对路径/docs-mode
 | 改完源码不生效 | `file:` 安装是**复制**进 `node_modules`，源目录更新不会自动同步 | 重新安装，或手动覆盖 `profiles/<name>/node_modules/dsh-docs-mode` |
 | bundle 加载失败/缺 `index.js` | `package.json` 缺 `main` / `exports` | 必须声明 `"main": "lib/index.js"` |
 
+### 一键更新（推荐）
+
+```powershell
+.\update.ps1                    # 更新并同步到 desktop profile
+.\update.ps1 -Profile web       # 指定 profile
+.\update.ps1 -NoPull            # 跳过 git pull（不联网）
+.\update.ps1 -Source D:\work\docs-mode   # 指定源目录
+```
+
+脚本会根据 profile 的安装方式自动处理：
+
+- **file: 安装**（开发调试）→ 同步源码到 `node_modules/dsh-docs-mode`、清除 package.json BOM、跑 doctor 自检
+- **npm / GitHub 源安装** → 调用 `dsh plugin add` 重装
+
 ### 一条命令诊断
 
 ```sh
