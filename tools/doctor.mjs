@@ -92,6 +92,25 @@ if (!existsSync(patchPath)) {
   const bad = [...new Set(vars)].filter(v => !allowed.has(v))
   if (bad.length) fail(`patch 含非白名单 prompt 变量：${bad.join(', ')}（0.2.1-rc.3 只注册 provider/model）`)
   else pass(vars.length ? `prompt 变量合法：${[...new Set(vars)].join(', ')}` : '无 prompt 变量')
+  // 子路径插件行：exports 收窄后 import 必然失败 → 该行 never started
+  // → 整个 preset 被标 broken → 客户端 presetOptions() 把它过滤掉
+  // → 「文书模式」从模式选择器里静默消失（只有管理区/诊断里能看到 broken 原因）。
+  const code = codeLines.join('\n')
+  // 注意 @scope/pkg 的分隔斜杠不算子路径，只有 @scope/pkg/sub 才算。
+  const subpathOf = (name) => {
+    if (!name || name.startsWith('cordis:') || name.startsWith('.')) return null
+    const rest = name.startsWith('@') ? name.split('/').slice(1) : name.split('/')
+    return rest.length > 1 ? rest.slice(1).join('/') : null
+  }
+  const rowNames = [...new Set([...code.matchAll(/name:[ \t]*'([^'\n]+)'/g)].map((m) => m[1]))]
+  const subpathNames = rowNames.filter((n) => subpathOf(n))
+  if (subpathNames.length) {
+    fail(`patch 含子路径插件行（import 会失败，preset 变 broken 后从模式选择器消失）：${subpathNames.join(', ')}`)
+  } else pass('无子路径插件行')
+  // profile 名写死：装到 web / 自定义 profile 时 createRequire 解析失败 → 挂载失败
+  if (/profiles['"],\s*['"]desktop['"]/.test(code)) {
+    fail("patch 把 profile 名写死成 desktop（换 profile 会 MODULE_NOT_FOUND，整行求值失败）")
+  } else pass('路径解析与 profile 名无关')
   // preset 目录
   for (const d of ['preset', 'skills', 'assets']) {
     if (existsSync(join(INSTALLED, d))) pass(`${d}/ 存在`)
