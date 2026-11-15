@@ -34,8 +34,10 @@ if (!PKG_NAME) { console.error('X package.json 缺少 name'); process.exit(1) }
 const SRC = join(REPO, 'preset')
 if (!existsSync(SRC)) { console.error('X 找不到 preset/ 目录: ' + SRC); process.exit(1) }
 
-const presetYml = readFileSync(join(SRC, 'preset.yml'), 'utf8')
-const agentYml = readFileSync(join(SRC, 'agent.cordis.yml'), 'utf8')
+const presetYml = readFileSync(join(SRC, 'preset.yml'), 'utf8').replace(/\r\n/g, '\n')
+// 统一成 LF：仓库在 Windows 上检出时是 CRLF，若原样透传，
+// 生成物会混用换行，且按行匹配的检查（子路径行等）会被行尾 \r 破坏。
+const agentYml = readFileSync(join(SRC, 'agent.cordis.yml'), 'utf8').replace(/\r\n/g, '\n')
 
 function field(text, key) {
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, 'm').exec(text)
@@ -47,16 +49,24 @@ const description = field(presetYml, 'description') ?? ''
 
 /**
  * 生成「解析本包安装目录并拼上子路径」的 !!js 表达式。
- * 返回 `(<IIFE>)('<sub>')` —— IIFE 内已 join 到子目录。
+ * 返回 `(<IIFE>)('sub')` —— IIFE 内已 join 到子目录。
  * 不能写成 `${R},'assets'`：那是逗号运算符，只会得到 'assets'。
+ *
+ * profile 名不能写死：插件可能装在 web / desktop / 自定义 profile 里，
+ * 写死一个名字会让别的 profile 抛 MODULE_NOT_FOUND，整行求值失败 → preset 挂载失败。
+ * 所以先看 DSH_PROFILE_DIR（dsh 会为当前 profile 设置），再遍历 $DSH_HOME/profiles/*。
  */
 const resolverFor = (sub) =>
-  `(()=>{const c=process.getBuiltinModule('node:module').createRequire(` +
-  `process.getBuiltinModule('node:url').pathToFileURL(` +
-  `process.getBuiltinModule('node:path').join(` +
-  `process.getBuiltinModule('node:os').homedir(),'.dsh','profiles','desktop','package.json')).href);` +
-  `return process.getBuiltinModule('node:path').join(` +
-  `process.getBuiltinModule('node:path').dirname(c.resolve('${PKG_NAME}/package.json')),'${sub}')})()`
+  `(()=>{const M=process.getBuiltinModule('node:module'),U=process.getBuiltinModule('node:url'),` +
+  `P=process.getBuiltinModule('node:path'),O=process.getBuiltinModule('node:os'),` +
+  `F=process.getBuiltinModule('node:fs'),` +
+  `h=process.env.DSH_HOME||P.join(O.homedir(),'.dsh');` +
+  `const dirs=[process.env.DSH_PROFILE_DIR,...(()=>{try{` +
+  `return F.readdirSync(P.join(h,'profiles')).map(n=>P.join(h,'profiles',n))}catch{return []}})()];` +
+  `for(const d of dirs){if(!d)continue;try{const f=P.join(d,'package.json');` +
+  `if(!F.existsSync(f))continue;` +
+  `return P.join(P.dirname(M.createRequire(U.pathToFileURL(f).href).resolve('${PKG_NAME}/package.json')),'${sub}')}catch{}}` +
+  `throw new Error('${PKG_NAME} package not found under: '+dirs.join(', '))})()`
 
 // ── 改写 1：customSkillDirs 指向随包 skills/ ────────────────────────────────
 const OLD_SKILLS = "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
@@ -73,9 +83,14 @@ body = body.replace(
   `# 随包携带的技能位于包内 skills/ 下，通过 customSkillDirs 注册。路径写法是\n$1# 「从 DSH profile 清单解析本包安装目录」——bundle 装在 profile 的 node_modules\n$1# 里，因此跨机器、跨 DSH_HOME 均成立。`,
 )
 
-// ── 改写 1b：注入资产路径（prefix 内用 {{ASSETS_DIR}} 占位符） ──────────────
-// 注意：只注册了 {{provider}} / {{model}} 两个 prompt 变量，不能出现 {{cwd}}。
-body = body.replace('{{ASSETS_DIR}}', resolverFor('assets'))
+// ── 改写 1b：persona 里不再注入代码 ────────────────────────────────────────
+// 以前把 resolverFor('assets') 塞进 persona 正文，模型看到的是一大段 JS 而不是路径。
+// 现在正文写的是「插件包内 assets/」+ 定位方式，纯文本即可，这里只做防回归检查。
+if (body.includes('{{ASSETS_DIR}}')) {
+  console.error('X preset/agent.cordis.yml 里还有 {{ASSETS_DIR}} 占位符：')
+  console.error('  该占位符已废弃（会把一段 JS 代码塞进提示词）。请改成纯文本描述 + glob 定位方式。')
+  process.exit(1)
+}
 
 // ── 改写 2：移除 dsh 0.2 已不存在的插件行 ──────────────────────────────────
 // dsh-workflow-worker-thread 在 0.2.0-rc2 中已无此包；文书模式本就禁用 workflow。
@@ -90,6 +105,33 @@ for (const line of body.split('\n')) {
   kept.push(line)
 }
 body = kept.join('\n')
+
+// ── 改写 3：禁止「子路径」插件行 ───────────────────────────────────────────
+// 0.2.x 的插件包用 package.json 的 exports 收窄可导入路径。多写一行
+// name: '@scope/pkg/sub'，只要那个子路径没被导出，该行 import 就失败
+// → 挂载审计报 `never started` → 整个 preset 被标成 broken
+// → 客户端 presetOptions() 过滤掉 broken，「文书模式」从选择器里静默消失。
+// 基包通常已注册全部工具（如 dsh-tool-subagent-control 自带 list_agents），
+// 所以这类行既重复又致命：构建期直接拒绝。
+function subpathOf(name) {
+  if (!name || name.startsWith('cordis:') || name.startsWith('.')) return null
+  const parts = name.split('/')
+  const body = name.startsWith('@') ? parts.slice(1) : parts
+  return body.length > 1 ? body.slice(1).join('/') : null
+}
+const subpathRows = []
+for (const line of body.split('\n')) {
+  const m = /^\s*-?\s*name:[ \t]*'([^'\n]+)'[ \t]*$/.exec(line)
+  if (!m) continue
+  const sub = subpathOf(m[1].trim())
+  if (sub) subpathRows.push(`${m[1].trim()}  (子路径 ${sub})`)
+}
+if (subpathRows.length) {
+  console.error('X preset 里存在子路径插件行，这些行会 import 失败并让整个 preset 变 broken：')
+  for (const r of subpathRows) console.error('  - ' + r)
+  console.error('  如果那个工具确实由基包提供，删掉这行即可（基包 apply 时会一起注册）。')
+  process.exit(1)
+}
 
 // ── 缩进到 config.plugins 之下（10 格） ────────────────────────────────────
 // 只裁尾空白并整体加 10 格：保留行首相对缩进，否则 `name:` 会掉到第 1 列。
@@ -148,13 +190,20 @@ function countFiles(dir) {
 }
 
 const problems = []
-if (!patch.includes(`c.resolve('${PKG_NAME}/package.json')`)) problems.push('patch 未解析本包名')
+if (!patch.includes(`resolve('${PKG_NAME}/package.json')`)) problems.push('patch 未解析本包名')
 if (!/\),'skills'\)/.test(patch)) problems.push('skills 解析表达式缺失')
-if (!/\),'assets'\)/.test(patch)) problems.push('assets 解析表达式缺失')
+if (!patch.includes('assets/')) problems.push('persona 未指向包内 assets/')
 if (!/^- insert:/m.test(patch)) problems.push('缺少顶层 insert')
 if (!patch.includes('id: preset-docs')) problems.push('缺少 preset-docs 声明')
 if (!patch.includes(`id: ${id}`)) problems.push('config.id 缺失')
 if (/\$\{[^}]*\},'assets'/.test(patch)) problems.push('存在逗号运算符误用')
+if (/profiles','desktop'/.test(patch)) problems.push('把 profile 名写死成 desktop（换 profile 会 MODULE_NOT_FOUND）')
+// 只允许 DSH 认得的两个 prompt 变量；其余 {{...}} 会原样漏进提示词。
+if (/\{\{(?!model\}\}|provider\}\})/.test(patch)) problems.push('patch 里仍有未替换的 {{变量}}（只允许 {{model}} / {{provider}}）')
+const leakedSubpaths = [...patch.matchAll(/name:[ \t]*'(@?[^'/]+(?:\/[^'/]+)+)'/g)]
+  .map(m => m[1])
+  .filter(n => subpathOf(n))
+if (leakedSubpaths.length) problems.push('存在子路径插件行：' + [...new Set(leakedSubpaths)].join(', '))
 const pluginRows = [...patch.matchAll(/^\s{10}- id: /gm)].length
 if (pluginRows < 10) problems.push(`插件条目过少(${pluginRows})`)
 

@@ -95,7 +95,9 @@
       - 界面截图：screenshot-tools/screenshots.mjs（先读 README，每张截图必须 OCR 验证）。
       - 模板库状态：用户询问模板库/已学模板时，读取 ~/.dsh/template-library/INDEX.md 与各类目录，报告每类份数、共识版状态、最近存档，可用 dsh-ui 展示。
 
-      本模式的模板库与工具脚本随包提供，位于 {{ASSETS_DIR}}：
+      本模式的模板库与工具脚本随包提供，位于插件包 dsh-docs-mode 的 assets/ 目录
+      （即 ~/.dsh/profiles/<profile>/node_modules/dsh-docs-mode/assets/，用
+      glob `~/.dsh/profiles/*/node_modules/dsh-docs-mode/assets` 可定位）：
       templates/ 为 12 类内置模板（<类别>-骨架.md 与 <类别>-风格卡.md），
       doc-tools/ 为质量保障脚本（体检/一致性/编号重排/同步/PDF/软著源码/示意图），
       docx-tools/ 为 Markdown⇄Word 转换与校验，screenshot-tools/ 为界面截图自动化。
@@ -156,11 +158,10 @@
 # carries whatever the deployment registered globally (repository plugins).
 #
 # 随 preset 打包的技能（doc-template-learning / tech-doc-deai / doc-quality）
-# 落在本 preset 目录的 skills/ 下，必须经 customSkillDirs 指过去才能被发现。
-# 这里用 {{PRESET_DIR}} 占位符而不是 !!js/baseUrl：
-#   - 安装器（lib/index.js）部署时把它替换成真实绝对路径（因机器而异）；
-#   - 老版本 dsh（如 0.2.1-rc.3）的 loader 在 preset 作用域可能不提供 baseUrl，
-#     !!js 求值失败会让整个 preset 挂载失败。
+# 落在包内 skills/ 下，必须经 customSkillDirs 指过去才能被发现。
+# 这里保留 baseUrl 写法：tools/build.mjs 生成 cordis.patch.yml 时会把它换成
+# 「从 DSH profile 清单解析本包安装目录」的等价表达式，所以生成物既不依赖
+# preset 目录变量 baseUrl，也不依赖 profile 名（web / desktop / 自定义都能用）。
 - id: skill-filesystem
   name: '@deepseek-ai/dsh-skill-filesystem'
   config:
@@ -252,9 +253,6 @@
   config:
     - id: tool-subagent-control
       name: '@deepseek-ai/dsh-tool-subagent-control'
-
-    - id: tool-subagent-list-agents
-      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
     - id: tool-subagent
       name: '@deepseek-ai/dsh-tool-subagent'
